@@ -92,6 +92,8 @@ Which option?
 
 **Don't add explanation** - keep options concise.
 
+**Auto mode fallback:** If running in auto mode and the user has not explicitly approved an option, choose `Keep the branch as-is` for the 4-option menu or `Keep as-is` for the detached-HEAD menu. Do not merge, push/create a PR, discard, delete, or clean up without explicit user approval.
+
 ### Step 5: Commit Style
 
 Use tight commit messages:
@@ -245,6 +247,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - Verify tests before offering options
 - Detect environment before presenting menu
 - Present exactly 4 options (or 3 for detached HEAD)
+- Choose Keep as-is in auto mode unless the user explicitly approves another option
 - Get typed confirmation for Option 4
 - Clean up worktree for Options 1 & 4 only
 - `cd` to main repo root before worktree removal
