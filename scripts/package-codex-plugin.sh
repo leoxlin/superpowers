@@ -118,6 +118,35 @@ infer_format_from_output() {
   esac
 }
 
+ensure_openai_policy_false() {
+  local metadata_file="$1"
+  local tmp
+
+  if grep -Eq '^[[:space:]]+allow_implicit_invocation:[[:space:]]*' "$metadata_file"; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/openai-metadata.XXXXXX")"
+    sed -E 's/^([[:space:]]+)allow_implicit_invocation:[[:space:]]*.*/\1allow_implicit_invocation: false/' "$metadata_file" >"$tmp"
+    mv "$tmp" "$metadata_file"
+    return 0
+  fi
+
+  if grep -Eq '^[[:space:]]*policy:[[:space:]]*$' "$metadata_file"; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/openai-metadata.XXXXXX")"
+    awk '
+      !inserted && /^[[:space:]]*policy:[[:space:]]*$/ {
+        print
+        print "  allow_implicit_invocation: false"
+        inserted = 1
+        next
+      }
+      { print }
+    ' "$metadata_file" >"$tmp"
+    mv "$tmp" "$metadata_file"
+    return 0
+  fi
+
+  printf '\npolicy:\n  allow_implicit_invocation: false\n' >>"$metadata_file"
+}
+
 if [[ -z "$FORMAT" ]]; then
   FORMAT="$(infer_format_from_output "$OUTPUT" || true)"
   if [[ -z "$FORMAT" ]]; then
@@ -268,6 +297,7 @@ while IFS= read -r skill_dir; do
 
   mkdir -p "$skill_dir/agents"
   cp "$metadata_file" "$skill_dir/agents/openai.yaml"
+  ensure_openai_policy_false "$skill_dir/agents/openai.yaml"
 done < <(find "$STAGE/skills" -mindepth 1 -maxdepth 1 -type d -print | sort)
 
 if [[ "$missing_metadata" -ne 0 ]]; then

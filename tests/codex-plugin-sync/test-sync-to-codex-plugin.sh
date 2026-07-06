@@ -336,6 +336,9 @@ add_openai_agent_metadata_fixture() {
 interface:
   display_name: "Example"
   short_description: "Destination-owned OpenAI metadata"
+
+policy:
+  allow_implicit_invocation: false
 EOF
 
     git -C "$repo" add plugins/superpowers/skills/example/agents/openai.yaml
@@ -421,6 +424,9 @@ EOF
 interface:
   display_name: "Example"
   short_description: "Destination-owned OpenAI metadata"
+
+policy:
+  allow_implicit_invocation: false
 EOF
 
     printf 'tracked keep\n' > "$repo/plugins/superpowers/.private-journal/keep.txt"
@@ -668,6 +674,7 @@ main() {
     assert_not_contains "$preview_output" "Assets (superpowers-small.svg, app-icon.png) will be seeded from" "Preview omits assets seeding note"
     assert_contains "$preview_section" "skills/example/SKILL.md" "Preview reflects dirty tracked destination file"
     assert_not_matches "$preview_section" "\\*deleting +skills/example/agents/openai\\.yaml" "Preview preserves destination-owned OpenAI agent metadata"
+    assert_contains "$preview_section" "skills/example/agents/openai.yaml" "Preview updates preserved OpenAI metadata with invocation policy"
     assert_current_branch "$dest" "$dest_branch" "Preview leaves destination checkout on its original branch"
     assert_branch_absent "$dest" "sync/superpowers-*" "Preview does not create sync branch in destination checkout"
 
@@ -708,7 +715,10 @@ Locally modified fixture content." "Dirty local apply preserves tracked working-
     assert_branch_absent "$noop_apply_dest" "sync/superpowers-*" "Clean no-op local apply does not create sync branch in destination checkout"
     assert_file_equals "$noop_openai_metadata_path" "interface:
   display_name: \"Example\"
-  short_description: \"Destination-owned OpenAI metadata\"" "Clean no-op local apply preserves OpenAI agent metadata"
+  short_description: \"Destination-owned OpenAI metadata\"
+
+policy:
+  allow_implicit_invocation: false" "Clean no-op local apply preserves OpenAI agent metadata and disables implicit invocation"
 
     echo ""
     echo "Missing manifest assertions..."

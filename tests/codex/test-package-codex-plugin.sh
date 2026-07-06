@@ -178,6 +178,8 @@ assert_equals "$manifest_summary" "superpowers	$expected_version	./skills/	$sour
 skill_count="$(find "$extracted/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
 metadata_count="$(find "$extracted/skills" -path '*/agents/openai.yaml' -type f | wc -l | tr -d ' ')"
 assert_equals "$metadata_count" "$skill_count" "every packaged skill has OpenAI metadata"
+brainstorming_metadata="$(read_archive_file "$archive" skills/brainstorming/agents/openai.yaml)"
+assert_contains "$brainstorming_metadata" "allow_implicit_invocation: false" "packaged metadata disables implicit skill invocation"
 
 if [[ -x "$extracted/skills/subagent-driven-development/scripts/task-brief" ]]; then
   pass "archive preserves executable script mode"

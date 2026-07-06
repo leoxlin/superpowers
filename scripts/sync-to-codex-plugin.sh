@@ -337,6 +337,46 @@ copy_preserved_destination_metadata() {
   done < <(find "$destination/skills" -path '*/agents/openai.yaml' -type f -print0)
 }
 
+ensure_openai_policy_false() {
+  local metadata_file="$1"
+  local tmp
+
+  if grep -Eq '^[[:space:]]+allow_implicit_invocation:[[:space:]]*' "$metadata_file"; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/openai-metadata.XXXXXX")"
+    sed -E 's/^([[:space:]]+)allow_implicit_invocation:[[:space:]]*.*/\1allow_implicit_invocation: false/' "$metadata_file" >"$tmp"
+    mv "$tmp" "$metadata_file"
+    return 0
+  fi
+
+  if grep -Eq '^[[:space:]]*policy:[[:space:]]*$' "$metadata_file"; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/openai-metadata.XXXXXX")"
+    awk '
+      !inserted && /^[[:space:]]*policy:[[:space:]]*$/ {
+        print
+        print "  allow_implicit_invocation: false"
+        inserted = 1
+        next
+      }
+      { print }
+    ' "$metadata_file" >"$tmp"
+    mv "$tmp" "$metadata_file"
+    return 0
+  fi
+
+  printf '\npolicy:\n  allow_implicit_invocation: false\n' >>"$metadata_file"
+}
+
+ensure_all_openai_policies_false() {
+  local source="$1"
+  local path
+
+  [[ -d "$source/skills" ]] || return 0
+
+  while IFS= read -r -d '' path; do
+    ensure_openai_policy_false "$path"
+  done < <(find "$source/skills" -path '*/agents/openai.yaml' -type f -print0)
+}
+
 prepare_sync_source() {
   local destination="$1"
 
@@ -348,6 +388,7 @@ prepare_sync_source() {
 
   rsync "${RSYNC_ARGS[@]}" "$UPSTREAM/" "$SYNC_SOURCE/" >/dev/null
   copy_preserved_destination_metadata "$destination" "$SYNC_SOURCE"
+  ensure_all_openai_policies_false "$SYNC_SOURCE"
 }
 
 prepare_sync_source "$PREVIEW_DEST"
